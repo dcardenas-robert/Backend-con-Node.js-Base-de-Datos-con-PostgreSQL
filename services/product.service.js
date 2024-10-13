@@ -1,5 +1,6 @@
 // const faker = require('faker');
 const boom = require('@hapi/boom');
+const { Op } = require('sequelize');
 const { models } = require('../libs/sequelize');
 class ProductsService {
   constructor() {
@@ -22,16 +23,32 @@ class ProductsService {
     const newProduct = await models.Product.create(data);
     return newProduct;
   }
-  async find(query) {
-    const options = { include: ['category'] };
+  async find(query = {}) {
+    const options = { include: ['category'], where: {} };
     const { limit, offset } = query;
-    if (limit && offset) {
+
+    if (limit !== undefined && offset !== undefined) {
       options.limit = parseInt(limit, 10);
-      options.offset = parseInt(offset, 20);
+      options.offset = parseInt(offset, 10);
     }
+
+    const { price } = query;
+    if (price && !isNaN(price)) {
+      options.where.price = parseInt(price, 10);
+    }
+
+    const { price_min, price_max } = query;
+    if (price_min && price_max) {
+      options.where.price = {
+        [Op.gte]: parseInt(price_min, 10),
+        [Op.lte]: parseInt(price_max, 10),
+      };
+    }
+
     const products = await models.Product.findAll(options);
     return products;
   }
+
   async findOne(id) {
     const product = this.products.find((item) => item.id === id);
     if (!product) {
